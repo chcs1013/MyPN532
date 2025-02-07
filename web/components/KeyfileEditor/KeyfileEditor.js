@@ -193,6 +193,78 @@ const data = {
                 ElMessage.error('处理失败:' + err);
             }
         },
+        async merge_file() {
+            if (!this.canContinue) return ElMessage.error('现在不能继续');
+            let newFileName;
+            try {
+                const filename = (await ElMessageBox.prompt('使用合并功能将多个密钥文件合并为一个。\n输入新文件名称:', '合并密钥文件')).value;
+                const pattern = /([\:\*\?"\<\>\|]|(^aux$|^con$|^com[0-9]$|^nul$))/ig // windows
+                if (pattern.test(filename)) return ElMessage.error('文件名非法')
+                newFileName = filename;
+            } catch { return }
+
+            const el = document.createElement('dialog');
+            el.innerText = `正在进行中...`;
+            document.body.appendChild(el);
+            el.showModal();
+
+            const files = this.keyfileSelectAll ? this.keyfiles : this.keyfile;
+
+            const set = new Set();
+            let n = 0, total = files.length, fails = 0;
+            for (const i of files) {
+                ++n;
+                el.innerText = `(${n}/${total}) 正在下载 ${i}`;
+                try {
+                    const text = await (await fetch('/api/v4.8/api/keyfile', { method: 'POST', body: i })).text();
+                    el.innerText = `(${n}/${total}) 正在处理 ${i}`;
+                    const lines = text.trim().split('\n');
+                    for (const j of lines) {
+                        if (!j.trim()) continue; // ignore empty lines
+                        if (j.startsWith('#')) continue; // ignore #
+                        if (!set.has(j)) set.add(j);
+                    }
+                } catch {
+                    ++fails;
+                }
+            }
+
+            el.innerText = `正在排序`;
+            let arr;
+            await new Promise(r => setTimeout(() => {
+                arr = Array.from(set).sort();
+                r();
+            }, 100));
+
+            el.innerText = `正在写入 ${newFileName}`;
+            const url = new URL('/api/v4.8/api/keyfile', location.href);
+            url.searchParams.append('filename', newFileName);
+            try {
+                const resp = await fetch(url, {
+                    method: 'PATCH',
+                    body: arr.join('\n'),
+                });
+                if (!resp.ok) throw `Error ${resp.status}; ${await resp.text()}`;
+            } catch (error) {
+                el.close();
+                try {
+                    await ElMessageBox.alert(`写入到文件 ${newFileName} 时发生错误：${error}`, '合并密钥文件', {
+                        type: 'error'
+                    });
+                } catch { }
+                el.showModal();
+            }
+
+            el.close();
+            
+            try {
+                await ElMessageBox.alert(`合并完成，成功 ${total - fails}，失败 ${fails}。`, '合并密钥文件', {
+                    type: 'success'
+                });
+            } catch { }
+            el.remove();
+            this.loadFiles();
+        },
 
     },
 

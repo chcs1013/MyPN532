@@ -17,6 +17,7 @@
             <div style="display: flex; margin-top: 1em;">
                 <ElButton :disabled="!canContinue" style="flex: 1;" @click="selectit(true)">创建</ElButton>
                 <ElButton :disabled="!canContinue || (keyfile.length != 1) || keyfileSelectAll" type="primary" plain style="flex: 1;" @click="selectit">编辑</ElButton>
+                <ElButton :disabled="!canContinue || (keyfiles.length < 2) || (keyfile.length < 2 && (!keyfileSelectAll))" style="flex: 1;" @click="merge_file">合并</ElButton>
                 <ElButton :disabled="!canContinue || keyfiles.length == 0 || (keyfile.length == 0 && (!keyfileSelectAll))" type="danger" plain style="flex: 1;" @click="deleteit">删除</ElButton>
                 <ElButton :disabled="!canContinue" @click="userLoadData">刷新列表</ElButton>
             </div>

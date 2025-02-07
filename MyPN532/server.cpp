@@ -803,6 +803,7 @@ void server::MainServer::appversioncommon(const HttpRequestPtr& req, std::functi
 	HRSRC hResID = ::FindResourceW(hInst, MAKEINTRESOURCEW(IDR_BIN_VERSION), L"BIN");
 	if (!hResID) throw std::exception("Resource is broken, please re-download the application");
 	HGLOBAL hRes = ::LoadResource(hInst, hResID);
+	if (!hRes) throw std::exception("Resource is broken, please re-download the application");
 	DWORD dwResSize = ::SizeofResource(hInst, hResID);
 	if (dwResSize > 1024) throw std::exception();
 	LPVOID pRes = ::LockResource(hRes);
@@ -863,6 +864,66 @@ void server::MainServer::updateurlconstruct(const HttpRequestPtr& req, std::func
 	resp->setBody(tem);
 
 	callback(resp);
+}
+
+void server::MainServer::updateorigin(const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& callback) const
+{
+	if (req->method() == Get) {
+		HttpResponsePtr resp = HttpResponse::newFileResponse("webroot/assets/static/update_service_provider");
+		CORSadd(req, resp);
+		resp->setContentTypeCode(CT_TEXT_PLAIN);
+		return callback(resp);
+	}
+
+	HttpResponsePtr resp = HttpResponse::newHttpResponse();
+	CORSadd(req, resp);
+	resp->setContentTypeCode(CT_TEXT_PLAIN);
+	if (req->method() == Options) return callback(resp);
+	
+	// Modify the update service provider
+	string data = req->bodyData();
+	{
+		// 将 webroot/assets/update/providers/{data}/ 下的所有文件复制到 webroot/assets/static/ 下，覆盖同名文件
+		string src = "webroot/assets/update/providers/" + data + "/";
+		string dst = "webroot/assets/static/";
+		const auto CopyDirectory = [](string src, string dst) -> bool {
+			// 遍历src目录下的所有文件，不考虑子目录
+			WIN32_FIND_DATAA findFileData;
+			HANDLE hFind = FindFirstFileA((src + "\\*").c_str(), &findFileData);
+			if (hFind == INVALID_HANDLE_VALUE) {
+				return false;
+			}
+			do {
+				// 检查是否是文件（不是目录）
+				if (!(findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+					string srcFile = src + "\\" + findFileData.cFileName;
+					string dstFile = dst + "\\" + findFileData.cFileName;
+					if (!CopyFileA(srcFile.c_str(), dstFile.c_str(), FALSE)) {
+						FindClose(hFind);
+						return false;
+					}
+				}
+			} while (FindNextFileA(hFind, &findFileData) != 0);
+
+			FindClose(hFind);
+			return true;
+		};
+		if (CopyDirectory(src, dst)) {
+			resp->setStatusCode(k200OK);
+		}
+		else {
+			resp->setStatusCode(k500InternalServerError);
+			resp->addHeader("x-error-code", to_string(GetLastError()));
+			resp->setBody(ConvertUTF16ToUTF8(LastErrorStrW()));
+		}
+	}
+
+	callback(resp);
+}
+
+void server::MainServer::updatelistprovider(const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& callback) const
+{
+
 }
 
 void server::MainServer::getgenshinurl(const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& callback) const

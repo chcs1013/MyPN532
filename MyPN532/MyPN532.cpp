@@ -30,6 +30,7 @@ extern size_t appConnectedTimes;
 #include <openssl/evp.h>
 #include <openssl/buffer.h>
 #include "检测端口是否被占用.hpp"
+#include "TrustCheck.hpp"
 
 std::string base64_encode(const std::string& data) {
 	BIO* b64 = BIO_new(BIO_f_base64());
@@ -201,6 +202,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	// TODO: Place code here.
 	UNREFERENCED_PARAMETER(0);
 	using namespace std;
+
+	{ auto r = SafeCheck(false); if (r != 0)return r; }
 
 	if (!IsWindowsVistaOrGreater()) {
 		fprintf(stderr, "[FATAL] Your OS is TOO LOW!\nIf you want to run this "

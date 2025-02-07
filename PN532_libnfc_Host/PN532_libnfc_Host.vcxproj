@@ -167,7 +167,8 @@
       </Command>
     </CustomBuildStep>
     <PostBuildEvent>
-      <Command>$(SystemRoot)\System32\cmd.exe /c copy /y "$(ProjectDir)\..\bin\$(TargetFileName)" "$(ProjectDir)\..\bin\pn532_data\bin\self\service.exe"</Command>
+      <Command>cmd.exe /c $(SolutionPath)\..\bin\sign_auto $(TargetFileName)
+$(SystemRoot)\System32\cmd.exe /c copy /y "$(ProjectDir)\..\bin\$(TargetFileName)" "$(ProjectDir)\..\bin\pn532_data\bin\self\service.exe"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
