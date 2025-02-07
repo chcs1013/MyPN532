@@ -1,1 +1,0 @@
-try{eval('()=>{}')}catch(error){document.write('<h1 style="color:red">FATAL: IE is not supported</h1>')}
